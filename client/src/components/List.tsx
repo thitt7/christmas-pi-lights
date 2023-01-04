@@ -2,12 +2,14 @@ import React, {useState, useEffect, useRef} from 'react'
 import { useAppDispatch, useAppSelector } from '../store/Hooks'
 import Lights from './Lights'
 
+export interface song {
+  source?: AudioBufferSourceNode,
+  context?: AudioContext,
+  name?: string
+}
+
 const List = () => {
-    interface song {
-      source?: AudioBufferSourceNode,
-      context?: AudioContext,
-      name?: string
-    }
+    
     const playButton = <span className="material-icons">play_arrow</span>
     const pauseButton = <span className="material-icons">pause</span>
 
@@ -22,6 +24,8 @@ const List = () => {
     let source: AudioBufferSourceNode  | undefined
     let example: string = 'hello world'
     const prevSource = useRef<song>({})
+
+    const returnRef = () => prevSource.current
     
     const getPlayList = async() => {
         // fetch and load playlist from raspberry pi filesystem
@@ -57,6 +61,7 @@ const List = () => {
       const start = async (fileName: string, source: AudioBufferSourceNode) => {
         // Stop the existing source if already playing another song
         if (prevSource?.current?.source?.buffer) {
+          dispatch({ type: 'SET_PLAYING', playing: false})
           prevSource?.current?.context?.suspend()
         }
         console.log("song queued: ", fileName)
@@ -83,7 +88,9 @@ const List = () => {
         // Start the audio after the delay
         // source.start(wait / 1000);
         // Store context-related data in ref to be referenced when new song is queued
+        console.log(context)
         if (prevSource.current.name != fileName) {
+          dispatch({ type: 'SET_PLAYING', playing: true})
           source.start(context.currentTime)
           console.log('context started')
           prevSource.current = {...prevSource.current, source: source, context: context, name: fileName }
@@ -97,11 +104,12 @@ const List = () => {
         // }
         // console.log(obj)
         // dispatch({ type: 'SET_CONTEXT', context: {...context} })
-        // dispatch({ type: 'SET_SOURCE', source: {...source} })
+        // dispatch({ type: 'SET_SOURCE', source: prevSource.current })
         // console.log('redux state set')
       }
     
       const stop = async (source: AudioBufferSourceNode) => {
+        dispatch({ type: 'SET_PLAYING', playing: false})
         prevSource?.current?.context?.suspend()
         setCurrentSong('')
         // source = null;
@@ -109,16 +117,6 @@ const List = () => {
         await fetch(`/stop`, {method: 'POST'});
       }
 
-      const setUpAnalyser = (source: AudioBufferSourceNode) => {
-        const analyser = context.createAnalyser()
-        analyser.fftSize = 2048
-
-        const bufferLength = analyser.frequencyBinCount
-        const dataArray = new Uint8Array(bufferLength)
-        analyser.getByteTimeDomainData(dataArray)
-
-        source.connect(analyser)
-      }
 
     useEffect( () => {
       getPlayList() 
@@ -132,7 +130,7 @@ const List = () => {
     return (
         <div>
           <div>
-              <Lights source={source} context={context} pause={stop} play={start}/>
+              <Lights returnRef={returnRef}/>
           </div>
           <div className="playlist">
               <ul>

@@ -5,8 +5,9 @@ const initState = {
   
   context: {},
   source: {},
+  queue: [],
+  playing: false,
   index: 0,
-  score: 0,
 }
 
 const Reducer = (state = initState, action: any) => {
@@ -25,10 +26,10 @@ const Reducer = (state = initState, action: any) => {
         source: action.source,
       }
 
-    case 'SET_SCORE':
+    case 'SET_PLAYING':
       return {
         ...state,
-        score: action.score,
+        playing: action.playing,
       }
 
       case 'SET_ANSWERED':
